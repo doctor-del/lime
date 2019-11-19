@@ -1,6 +1,7 @@
 package lime._internal.backend.html5;
 
 import haxe.io.Bytes;
+import haxe.Serializer;
 import js.html.AnchorElement;
 import js.html.ErrorEvent;
 import js.html.Event;
