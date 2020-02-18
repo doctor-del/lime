@@ -645,6 +645,72 @@ class ImageDataUtil
 		var imagePremultiplied = image.premultiplied;
 		if (imagePremultiplied) image.premultiplied = false;
 
+		#if lime_old_gaussian
+		var sourceImagePremultiplied = sourceImage.premultiplied;
+		if (sourceImagePremultiplied) sourceImage.premultiplied = false;
+
+		var imgB = image.data;
+		var imgA = sourceImage.data;
+		var w = Std.int(sourceRect.width);
+		var h = Std.int(sourceRect.height);
+		var bx = Std.int(blurX);
+		var by = Std.int(blurY);
+		var oX = Std.int(destPoint.x);
+		var oY = Std.int(destPoint.y);
+
+		var n = (quality * 2) - 1;
+		var rng = Math.pow(2, quality) * 0.125;
+
+		var bxs = __getBoxesForGaussianBlur(bx * rng, n);
+		var bys = __getBoxesForGaussianBlur(by * rng, n);
+		var offset:Int = Std.int((w * oY + oX) * 4);
+
+		__boxBlur(imgA, imgB, w, h, (bxs[0] - 1) / 2, (bys[0] - 1) / 2);
+		var bIndex:Int = 1;
+
+		for (i in 0...Std.int(n / 2))
+		{
+			__boxBlur(imgB, imgA, w, h, (bxs[bIndex] - 1) / 2, (bys[bIndex] - 1) / 2);
+			__boxBlur(imgA, imgB, w, h, (bxs[bIndex + 1] - 1) / 2, (bys[bIndex + 1] - 1) / 2);
+			bIndex += 2;
+		}
+
+		var x:Int;
+		var y:Int;
+
+		if (offset != 0 || strength != 1)
+		{
+			if (offset <= 0)
+			{
+				y = 0;
+				while (y < h)
+				{
+					x = 0;
+					while (x < w)
+					{
+						__translatePixel(imgB, sourceImage.rect, image.rect, destPoint, x, y, strength);
+						x += 1;
+					}
+					y += 1;
+				}
+			}
+			else
+			{
+				y = h - 1;
+				while (y >= 0)
+				{
+					x = w - 1;
+					while (x >= 0)
+					{
+						__translatePixel(imgB, sourceImage.rect, image.rect, destPoint, x, y, strength);
+						x -= 1;
+					}
+					y -= 1;
+				}
+			}
+		}
+		#else
+
 		// TODO: Use ImageDataView
 
 		// if (image.buffer.premultiplied || sourceImage.buffer.premultiplied) {
@@ -654,13 +720,22 @@ class ImageDataUtil
 		// }
 
 		StackBlur.blur(image, sourceImage, sourceRect, destPoint, blurX, blurY, quality);
+		#end
 
 		image.dirty = true;
 		image.version++;
 
 		if (imagePremultiplied) image.premultiplied = true;
 
+		#if lime_old_gaussian
+		sourceImage.dirty = true;
+		sourceImage.version++;
+		if (sourceImagePremultiplied) sourceImage.premultiplied = true;
+		if (imgB == image.data) return image;
+		return sourceImage;
+		#else
 		return image;
+		#end
 	}
 
 	public static function getColorBoundsRect(image:Image, mask:Int, color:Int, findColor:Bool, format:PixelFormat):Rectangle
