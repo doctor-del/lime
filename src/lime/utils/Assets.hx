@@ -452,8 +452,9 @@ class Assets
 				{
 					rootPath = Path.directory(path);
 				}
-				path = __cacheBreak(path);
 			}
+			// REDSPELL: moved __cacheBreak out so libraryPaths benefits from it too
+			path = __cacheBreak(path);
 
 			AssetManifest.loadFromFile(path, rootPath).onComplete(function(manifest)
 			{
